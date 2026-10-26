@@ -8,7 +8,6 @@
 数据源：回收商网公开报价页（无需登录即可见价格）
 说明：废废网等站对未登录用户遮蔽价格（显示****），如需接入需配合浏览器自动化或登录态。
 """
-import requests
 from bs4 import BeautifulSoup
 import json, re, sys, time, subprocess
 from datetime import datetime
