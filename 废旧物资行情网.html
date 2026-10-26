@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>再生行情 - 全国废旧物资价格实时查询</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='%23e8632b'/><path d='M6 18V9l6-4 6 4v9h-4v-5h-4v5z' fill='white'/></svg>">
+<style>
+/* ========== 设计变量 ========== */
+:root {
+  --nav-bg: #16202e;
+  --nav-text: #c9d3e0;
+  --nav-active: #ffffff;
+  --accent: #e8632b;
+  --accent-dark: #c94f1d;
+  --bg: #f2f4f7;
+  --card: #ffffff;
+  --border: #e3e7ee;
+  --text: #1f2937;
+  --text-2: #5b6675;
+  --text-3: #8a94a3;
+  --up: #d93025;
+  --down: #188038;
+  --flat: #8a94a3;
+  --tag-bg: #eef2f7;
+  --shadow: 0 1px 2px rgba(20,30,50,.04), 0 1px 3px rgba(20,30,50,.06);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.5; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* ========== 顶部导航 ========== */
+.topbar {
+  background: var(--nav-bg); color: var(--nav-text);
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 2px solid var(--accent);
+}
+.topbar-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 20px;
+  display: flex; align-items: center; height: 56px; gap: 28px;
+}
+.logo { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 17px; letter-spacing: .5px; }
+.logo svg { width: 26px; height: 26px; }
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav-item {
+  padding: 6px 14px; border-radius: 4px; color: var(--nav-text);
+  font-size: 14px; cursor: pointer; transition: background .15s, color .15s;
+}
+.nav-item:hover { color: #fff; background: rgba(255,255,255,.06); }
+.nav-item.active { color: #fff; background: rgba(232,99,43,.25); }
+.topbar-right { font-size: 12px; color: var(--text-3); }
+.topbar-right .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #34d399; margin-right: 6px; vertical-align: middle; }
+
+/* ========== 布局容器 ========== */
+.container { max-width: 1280px; margin: 0 auto; padding: 20px; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* ========== 通用组件 ========== */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--shadow); }
+.card-pad { padding: 18px 20px; }
+.section-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+.section-title .more { font-size: 12px; color: var(--text-3); font-weight: 400; cursor: pointer; }
+.section-title .more:hover { color: var(--accent); }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; background: var(--tag-bg); color: var(--text-2); font-size: 12px; }
+.tag.up { color: var(--up); background: #fde8e6; }
+.tag.down { color: var(--down); background: #e6f4ea; }
+.tag.flat { color: var(--flat); background: #eef0f3; }
+
+.btn {
+  display: inline-block; padding: 8px 18px; border-radius: 4px; font-size: 14px;
+  background: var(--accent); color: #fff; cursor: pointer; transition: background .15s;
+}
+.btn:hover { background: var(--accent-dark); }
+.btn.ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+.btn.ghost:hover { background: var(--tag-bg); color: var(--text); }
+
+/* ========== 首页 ========== */
+.hero {
+  background: linear-gradient(135deg, #1a2a3e 0%, #16202e 100%);
+  color: #fff; border-radius: 6px; padding: 24px 28px; margin-bottom: 18px;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+}
+.hero h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+.hero p { font-size: 13px; color: #9fb0c3; }
+.hero-stats { display: flex; gap: 28px; }
+.hero-stat .label { font-size: 12px; color: #9fb0c3; }
+.hero-stat .value { font-size: 22px; font-weight: 600; margin-top: 2px; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+
+/* 涨跌榜 */
+.change-list { padding: 6px 0; }
+.change-row {
+  display: grid; grid-template-columns: 1fr 90px 80px 70px; gap: 10px;
+  padding: 10px 20px; align-items: center; border-bottom: 1px solid #f0f2f6; cursor: pointer;
+}
+.change-row:last-child { border-bottom: none; }
+.change-row:hover { background: #f8fafc; }
+.change-row .name { font-size: 13px; color: var(--text); }
+.change-row .city { font-size: 12px; color: var(--text-3); }
+.change-row .price { text-align: right; font-size: 13px; font-weight: 600; }
+.change-row .pct { text-align: right; font-size: 13px; font-weight: 600; }
+.pct.up { color: var(--up); }
+.pct.down { color: var(--down); }
+
+/* 品类卡片 */
+.cat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+.cat-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 16px; cursor: pointer; transition: transform .15s, border-color .15s;
+}
+.cat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.cat-card .icon { width: 36px; height: 36px; border-radius: 6px; background: #fde8e6; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.cat-card .icon svg { width: 20px; height: 20px; }
+.cat-card .name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.cat-card .count { font-size: 12px; color: var(--text-3); }
+
+/* ========== 行情中心 ========== */
+.market-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; }
+.filter-panel { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px; height: fit-content; }
+.filter-group { margin-bottom: 16px; }
+.filter-group:last-child { margin-bottom: 0; }
+.filter-group h4 { font-size: 12px; color: var(--text-3); margin-bottom: 8px; font-weight: 500; }
+.filter-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter-chip {
+  padding: 4px 10px; border-radius: 4px; background: var(--tag-bg); font-size: 12px;
+  color: var(--text-2); cursor: pointer; transition: all .15s;
+}
+.filter-chip:hover { background: #dde4ee; }
+.filter-chip.active { background: var(--accent); color: #fff; }
+
+.price-table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.price-table th, .price-table td { padding: 11px 14px; text-align: left; border-bottom: 1px solid #f0f2f6; font-size: 13px; }
+.price-table th { background: #f8fafc; color: var(--text-3); font-weight: 500; font-size: 12px; }
+.price-table tr:last-child td { border-bottom: none; }
+.price-table tbody tr { cursor: pointer; }
+.price-table tbody tr:hover { background: #f8fafc; }
+.price-table .num { text-align: right; }
+.price-table th.num { text-align: right; }
+
+/* ========== 品类大全 ========== */
+.category-section { margin-bottom: 20px; }
+.category-section h3 {
+  font-size: 15px; font-weight: 600; margin-bottom: 12px;
+  padding-left: 10px; border-left: 3px solid var(--accent);
+}
+.item-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.item-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 14px 16px; cursor: pointer; transition: border-color .15s;
+}
+.item-card:hover { border-color: var(--accent); }
+.item-card .iname { font-size: 13px; color: var(--text); margin-bottom: 8px; }
+.item-card .iprice { font-size: 18px; font-weight: 600; }
+.item-card .iprice .unit { font-size: 11px; color: var(--text-3); font-weight: 400; margin-left: 4px; }
+.item-card .ichange { font-size: 12px; margin-top: 4px; }
+
+/* ========== 地区排行 ========== */
+.rank-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.rank-summary {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;
+}
+.rank-stat { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+.rank-stat .label { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+.rank-stat .value { font-size: 20px; font-weight: 600; }
+.rank-stat .sub { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+
+/* ========== 走势分析 ========== */
+.trend-toolbar {
+  background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 14px 18px; margin-bottom: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+}
+.trend-toolbar select {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px;
+  background: #fff; color: var(--text); min-width: 130px;
+}
+.chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 18px; }
+#trendChart { width: 100%; height: 420px; }
+
+/* ========== 商家入驻 ========== */
+.merchant-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px;
+  font-size: 14px; font-family: inherit; background: #fff;
+}
+.form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+.merchant-info h3 { font-size: 16px; margin-bottom: 12px; }
+.merchant-info ul { list-style: none; }
+.merchant-info li { padding: 8px 0; border-bottom: 1px solid #f0f2f6; font-size: 13px; color: var(--text-2); display: flex; gap: 8px; }
+.merchant-info li::before { content: "✓"; color: var(--down); font-weight: 600; }
+
+/* ========== Toast ========== */
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: rgba(20,30,50,.9); color: #fff; padding: 10px 20px; border-radius: 6px;
+  font-size: 13px; z-index: 999; opacity: 0; transition: opacity .2s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ========== 页脚 ========== */
+.footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text-3); }
+
+/* ========== 响应式 ========== */
+@media (max-width: 900px) {
+  .topbar-inner { padding: 0 12px; gap: 12px; height: 52px; }
+  .logo { font-size: 15px; }
+  .logo svg { width: 22px; height: 22px; }
+  .nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex: 1; min-width: 0; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-item { padding: 6px 10px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+  .topbar-right { display: none; }
+  .container { padding: 12px; }
+  .two-col { grid-template-columns: 1fr; }
+  .cat-grid { grid-template-columns: repeat(2, 1fr); }
+  .market-layout { grid-template-columns: 1fr; }
+  .item-grid { grid-template-columns: repeat(2, 1fr); }
+  .rank-summary { grid-template-columns: 1fr; }
+  .merchant-layout { grid-template-columns: 1fr; }
+  .hero-stats { gap: 16px; flex-wrap: wrap; }
+  .change-row { grid-template-columns: 1fr 70px 60px; padding: 10px 12px; }
+  .change-row .city { display: none; }
+  #trendChart { height: 300px; }
+  .price-table th, .price-table td { padding: 9px 8px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== 顶部导航 ========== -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="logo" href="#/home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#e8632b" stroke-width="2">
+        <path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/>
+      </svg>
+      再生行情
+    </a>
+    <nav class="nav">
+      <div class="nav-item" data-route="home">首页</div>
+      <div class="nav-item" data-route="market">行情中心</div>
+      <div class="nav-item" data-route="category">品类大全</div>
+      <div class="nav-item" data-route="rank">地区排行</div>
+      <div class="nav-item" data-route="trend">走势分析</div>
+      <div class="nav-item" data-route="merchant">商家入驻</div>
+    </nav>
+    <div class="topbar-right"><span class="dot"></span>数据更新于 <span id="updateTime"></span></div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ========== 视图：首页 ========== -->
+  <section id="view-home" class="view">
+    <div class="hero">
+      <div>
+        <h1>全国废旧物资价格行情</h1>
+        <p>覆盖废钢、有色、废纸、废塑料 25 个品类，每日更新 · 单位：元/吨</p>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="label">覆盖城市</div><div class="value num">11</div></div>
+        <div class="hero-stat"><div class="label">在报品类</div><div class="value num">25</div></div>
+        <div class="hero-stat"><div class="label">今日上涨</div><div class="value num" style="color:#ff8a7a" id="upCount">--</div></div>
+        <div class="hero-stat"><div class="label">今日下跌</div><div class="value num" style="color:#7fd89a" id="downCount">--</div></div>
+      </div>
+    </div>
+
+    <!-- 实时抓取行情（来自 prices.json，由 scraper.py 生成） -->
+    <div class="card" id="livePanel" style="margin-bottom:18px;display:none">
+      <div class="card-pad">
+        <div class="section-title">
+          <span><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#34d399;margin-right:8px;vertical-align:middle"></span>实时抓取行情 <span style="font-size:12px;color:var(--text-3);font-weight:400;margin-left:8px" id="liveSource"></span></span>
+          <span class="tag" id="liveCount"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="price-table" style="border:none">
+            <colgroup><col style="width:15%"><col style="width:25%"><col style="width:20%"><col style="width:15%"><col style="width:15%"><col style="width:10%"></colgroup>
+            <thead><tr><th>省份</th><th>品名</th><th>品类</th><th class="num">价格(元/吨)</th><th>日期</th><th>备注</th></tr></thead>
+            <tbody id="liveBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="cat-grid" id="homeCatGrid"></div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-pad">
+          <div class="section-title">涨幅榜 <span class="more" data-goto="rank">查看全部 →</span></div>
+          <div class="change-list" id="topGainers"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-pad">
+          <div class="section-title">跌幅榜 <span class="more" data-goto="rank">查看全部 →</span></div>
+          <div class="change-list" id="topLosers"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 视图：行情中心 ========== -->
+  <section id="view-market" class="view">
+    <div class="market-layout">
+      <aside class="filter-panel">
+        <div class="filter-group">
+          <h4>省份 / 城市</h4>
+          <div class="filter-options" id="cityFilter"></div>
+        </div>
+        <div class="filter-group">
+          <h4>品类大类</h4>
+          <div class="filter-options" id="catFilter"></div>
+        </div>
+      </aside>
+      <div>
+        <table class="price-table">
+          <colgroup>
+            <col style="width:18%"><col style="width:22%"><col style="width:15%">
+            <col style="width:15%"><col style="width:15%"><col style="width:15%">
+          </colgroup>
+          <thead>
+            <tr><th>城市</th><th>品类</th><th class="num">今日价(元/吨)</th><th class="num">日涨跌</th><th class="num">周涨跌</th><th class="num">走势</th></tr>
+          </thead>
+          <tbody id="marketBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 视图：品类大全 ========== -->
+  <section id="view-category" class="view" style="padding: 0 20px 20px;">
+    <div id="categoryList"></div>
+  </section>
+
+  <!-- ========== 视图：地区排行 ========== -->
+  <section id="view-rank" class="view">
+    <div class="rank-toolbar">
+      <label style="font-size:13px;color:var(--text-2)">选择品类：</label>
+      <select id="rankCatSelect"></select>
+      <span class="tag" style="margin-left:auto">按今日价从高到低</span>
+    </div>
+    <div class="rank-summary">
+      <div class="rank-stat"><div class="label">最高价城市</div><div class="value num" id="rankHigh">--</div><div class="sub" id="rankHighSub"></div></div>
+      <div class="rank-stat"><div class="label">最低价城市</div><div class="value num" id="rankLow">--</div><div class="sub" id="rankLowSub"></div></div>
+      <div class="rank-stat"><div class="label">地区价差</div><div class="value num" id="rankSpread">--</div><div class="sub">跨地区套利空间（元/吨）</div></div>
+    </div>
+    <div class="card">
+      <table class="price-table" style="border:none">
+        <colgroup><col style="width:10%"><col style="width:25%"><col style="width:25%"><col style="width:20%"><col style="width:20%"></colgroup>
+        <thead><tr><th>排名</th><th>城市</th><th>今日价(元/吨)</th><th>日涨跌</th><th>周涨跌</th></tr></thead>
+        <tbody id="rankBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 视图：走势分析 ========== -->
+  <section id="view-trend" class="view">
+    <div class="trend-toolbar">
+      <label style="font-size:13px;color:var(--text-2)">地区</label>
+      <select id="trendCity"></select>
+      <label style="font-size:13px;color:var(--text-2)">品类</label>
+      <select id="trendItem"></select>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-3)" id="trendSummary"></span>
+    </div>
+    <div class="chart-box"><div id="trendChart"></div></div>
+  </section>
+
+  <!-- ========== 视图：商家入驻 ========== -->
+  <section id="view-merchant" class="view">
+    <div class="merchant-layout">
+      <div class="card card-pad">
+        <h3 style="margin-bottom:16px;font-size:16px">回收站 / 打包站入驻申请</h3>
+        <form id="merchantForm">
+          <div class="form-group"><label>商家名称</label><input required placeholder="如：唐山XX废品收购站"></div>
+          <div class="form-group"><label>所在地区</label>
+            <select id="mchCity"></select>
+          </div>
+          <div class="form-group"><label>主营品类（可多选）</label>
+            <select id="mchCat" multiple style="height:100px"></select>
+          </div>
+          <div class="form-group"><label>联系电话</label><input required placeholder="用于平台采购方联系"></div>
+          <div class="form-group"><label>备注</label><textarea rows="3" placeholder="收货品类、价目说明等"></textarea></div>
+          <button type="submit" class="btn">提交申请</button>
+        </form>
+      </div>
+      <div class="card card-pad merchant-info">
+        <h3>入驻后你将获得</h3>
+        <ul>
+          <li>你的收货价出现在全国行情列表中，被采购方看到</li>
+          <li>按城市、品类被筛选匹配，获取周边出货需求</li>
+          <li>免费入驻，一期不抽成</li>
+          <li>数据每日更新，你的报价会标注"商家直报"标签</li>
+        </ul>
+        <div style="margin-top:18px;padding:12px;background:#fff7f2;border-radius:4px;font-size:12px;color:var(--text-2)">
+          一期为原型演示，提交后仅记录线索，不会真实发送短信或审核。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">再生行情 · 废旧物资价格查询原型 · 基准价参考 Mysteel / 生意社 / 回收商网 / 商务部再生资源指数（2026-10-26） · 单位：元/吨 · 日涨跌为演示值</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://fastly.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+/* ============================================================
+   数据层：模拟行情数据（确定性生成，保证刷新一致）
+   ============================================================ */
+const CATEGORIES = [
+  { id:'steel', name:'废钢铁', items:[
+    {id:'heavy', name:'重废钢', base:2050}, {id:'mid', name:'中废钢', base:1990},
+    {id:'light', name:'轻薄料', base:1750}, {id:'mixed', name:'统废', base:1900},
+    {id:'rebar', name:'钢筋头', base:2200}, {id:'ss304', name:'304不锈钢', base:12500},
+    {id:'ss201', name:'201不锈钢', base:4600}
+  ]},
+  { id:'nonferrous', name:'废有色金属', items:[
+    {id:'brightCu', name:'光亮铜(1#)', base:93500}, {id:'cu2', name:'紫铜(2#)', base:88000},
+    {id:'brass', name:'黄铜', base:44000}, {id:'alProfile', name:'铝合金型材', base:18500},
+    {id:'rawAl', name:'生铝', base:15000}, {id:'cookedAl', name:'熟铝', base:19000},
+    {id:'zinc', name:'锌', base:21000}, {id:'lead', name:'铅', base:17000}
+  ]},
+  { id:'paper', name:'废纸', items:[
+    {id:'cardboard', name:'黄板纸', base:1850}, {id:'corrugated', name:'瓦楞纸', base:1700},
+    {id:'news', name:'报纸', base:2200}, {id:'whiteEdge', name:'白纸边', base:3000},
+    {id:'book', name:'书纸', base:2500}
+  ]},
+  { id:'plastic', name:'废塑料', items:[
+    {id:'pet', name:'PET瓶片', base:4800}, {id:'peFilm', name:'PE膜', base:3500},
+    {id:'pp', name:'PP', base:5500}, {id:'pvc', name:'PVC', base:4000}, {id:'abs', name:'ABS', base:8200}
+  ]},
+  { id:'other', name:'其他', items:[
+    {id:'glass', name:'废玻璃', base:350}, {id:'rubber', name:'废橡胶', base:2800},
+    {id:'motor', name:'废电机', base:5800}
+  ]}
+];
+
+const CITIES = [
+  {id:'tangshan', name:'唐山', prov:'河北', factor:0.96},
+  {id:'shijiazhuang', name:'石家庄', prov:'河北', factor:0.97},
+  {id:'cangzhou', name:'沧州', prov:'河北', factor:0.95},
+  {id:'handan', name:'邯郸', prov:'河北', factor:0.965},
+  {id:'shenyang', name:'沈阳', prov:'辽宁', factor:0.98},
+  {id:'shanghai', name:'上海', prov:'上海', factor:1.00},
+  {id:'wuxi', name:'无锡', prov:'江苏', factor:1.01},
+  {id:'hangzhou', name:'杭州', prov:'浙江', factor:1.02},
+  {id:'foshan', name:'佛山', prov:'广东', factor:1.03},
+  {id:'linyi', name:'临沂', prov:'山东', factor:0.99},
+  {id:'zhengzhou', name:'郑州', prov:'河南', factor:0.975}
+];
+
+// 确定性伪随机
+function seededRandom(seed) {
+  let s = seed;
+  return function() { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+}
+
+// 生成所有城市 × 品类的今日价格
+function buildPriceData() {
+  const data = [];
+  CATEGORIES.forEach((cat, ci) => {
+    cat.items.forEach((item, ii) => {
+      CITIES.forEach((city, ci2) => {
+        const rnd = seededRandom(ci * 1000 + ii * 37 + ci2 * 7);
+        const dayPct = (rnd() - 0.45) * 4;     // -1.8% ~ +2.2%
+        const weekPct = (rnd() - 0.5) * 8;    // -4% ~ +4%
+        const price = Math.round(item.base * city.factor * (1 + dayPct/100));
+        data.push({
+          cityId: city.id, cityName: city.name, prov: city.prov,
+          catId: cat.id, catName: cat.name,
+          itemId: item.id, itemName: item.name,
+          price: price, dayPct: +dayPct.toFixed(2), weekPct: +weekPct.toFixed(2)
+        });
+      });
+    });
+  });
+  return data;
+}
+const PRICES = buildPriceData();
+
+// 生成历史 180 天数据（用于趋势图）
+function buildHistory(cityId, itemId) {
+  const entry = PRICES.find(p => p.cityId === cityId && p.itemId === itemId);
+  if (!entry) return { dates: [], values: [] };
+  const dates = [], values = [];
+  const rnd = seededRandom(cityId.length * 13 + itemId.length * 7 + 99);
+  let v = entry.price * 0.92;
+  const today = new Date();
+  for (let i = 179; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    dates.push(`${d.getMonth()+1}/${d.getDate()}`);
+    v = v * (1 + (rnd() - 0.48) * 0.02);
+    if (i === 0) v = entry.price;
+    values.push(Math.round(v));
+  }
+  return { dates, values };
+}
+
+/* ============================================================
+   路由
+   ============================================================ */
+const routes = ['home','market','category','rank','trend','merchant'];
+function navigate(route) {
+  if (!routes.includes(route)) route = 'home';
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + route).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.route === route));
+  window.scrollTo(0, 0);
+  if (route === 'trend') setTimeout(renderTrend, 50);
+}
+window.addEventListener('hashchange', () => navigate(location.hash.replace('#/','') || 'home'));
+
+/* ============================================================
+   渲染：首页
+   ============================================================ */
+function renderHome() {
+  // 品类卡片
+  const icons = {
+    steel: '<svg viewBox="0 0 24 24" fill="none" stroke="#e8632b" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13"/></svg>',
+    nonferrous: '<svg viewBox="0 0 24 24" fill="none" stroke="#e8632b" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>',
+    paper: '<svg viewBox="0 0 24 24" fill="none" stroke="#e8632b" stroke-width="2"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>',
+    plastic: '<svg viewBox="0 0 24 24" fill="none" stroke="#e8632b" stroke-width="2"><path d="M12 3c3 4 6 7 6 11a6 6 0 01-12 0c0-4 3-7 6-11z"/></svg>',
+    other: '<svg viewBox="0 0 24 24" fill="none" stroke="#e8632b" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>'
+  };
+  document.getElementById('homeCatGrid').innerHTML = CATEGORIES.map(c => `
+    <div class="cat-card" data-goto="category">
+      <div class="icon">${icons[c.id] || icons.other}</div>
+      <div class="name">${c.name}</div>
+      <div class="count">${c.items.length} 个在报型号</div>
+    </div>`).join('');
+
+  // 涨幅榜 / 跌幅榜
+  const sorted = [...PRICES].sort((a,b) => b.dayPct - a.dayPct);
+  const gainers = sorted.slice(0, 8);
+  const losers = sorted.slice(-8).reverse();
+  const rowHtml = r => `
+    <div class="change-row" data-goto="trend">
+      <div><div class="name">${r.itemName}</div><div class="city">${r.prov} · ${r.cityName}</div></div>
+      <div class="price num">${r.price.toLocaleString()}</div>
+      <div class="pct num ${r.dayPct>=0?'up':'down'}">${r.dayPct>=0?'+':''}${r.dayPct}%</div>
+    </div>`;
+  document.getElementById('topGainers').innerHTML = gainers.map(rowHtml).join('');
+  document.getElementById('topLosers').innerHTML = losers.map(rowHtml).join('');
+
+  // 统计
+  const up = PRICES.filter(p => p.dayPct > 0).length;
+  document.getElementById('upCount').textContent = up;
+  document.getElementById('downCount').textContent = PRICES.length - up;
+}
+
+/* ============================================================
+   渲染：行情中心
+   ============================================================ */
+const marketState = { city: 'all', cat: 'all' };
+function renderMarket() {
+  // 城市筛选 chips
+  document.getElementById('cityFilter').innerHTML =
+    `<div class="filter-chip ${marketState.city==='all'?'active':''}" data-city="all">全部</div>` +
+    CITIES.map(c => `<div class="filter-chip ${marketState.city===c.id?'active':''}" data-city="${c.id}">${c.name}</div>`).join('');
+  // 品类筛选 chips
+  document.getElementById('catFilter').innerHTML =
+    `<div class="filter-chip ${marketState.cat==='all'?'active':''}" data-cat="all">全部</div>` +
+    CATEGORIES.map(c => `<div class="filter-chip ${marketState.cat===c.id?'active':''}" data-cat="${c.id}">${c.name}</div>`).join('');
+
+  // 表格
+  let rows = PRICES;
+  if (marketState.city !== 'all') rows = rows.filter(r => r.cityId === marketState.city);
+  if (marketState.cat !== 'all') rows = rows.filter(r => r.catId === marketState.cat);
+  rows = rows.slice(0, 80);
+
+  document.getElementById('marketBody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.prov} ${r.cityName}</td>
+      <td>${r.itemName}</td>
+      <td class="num">${r.price.toLocaleString()}</td>
+      <td class="num" style="color:${r.dayPct>=0?'var(--up)':'var(--down)'}">${r.dayPct>=0?'+':''}${r.dayPct}%</td>
+      <td class="num" style="color:${r.weekPct>=0?'var(--up)':'var(--down)'}">${r.weekPct>=0?'+':''}${r.weekPct}%</td>
+      <td><span class="tag up" style="cursor:pointer" data-goto="trend">走势</span></td>
+    </tr>`).join('');
+}
+
+/* ============================================================
+   渲染：品类大全
+   ============================================================ */
+function renderCategory() {
+  document.getElementById('categoryList').innerHTML = CATEGORIES.map(cat => {
+    // 每个品类取全国平均价
+    const itemsHtml = cat.items.map(item => {
+      const rows = PRICES.filter(p => p.itemId === item.id);
+      const avg = Math.round(rows.reduce((s,r) => s + r.price, 0) / rows.length);
+      const avgDay = (rows.reduce((s,r) => s + r.dayPct, 0) / rows.length).toFixed(2);
+      const cls = avgDay >= 0 ? 'up' : 'down';
+      return `<div class="item-card" data-goto="trend" data-item="${item.id}">
+        <div class="iname">${item.name}</div>
+        <div class="iprice num">${avg.toLocaleString()}<span class="unit">元/吨</span></div>
+        <div class="ichange num" style="color:var(--${cls==='up'?'up':'down'})">全国均价 ${avgDay>=0?'+':''}${avgDay}%</div>
+      </div>`;
+    }).join('');
+    return `<div class="category-section">
+      <h3>${cat.name}（${cat.items.length} 个型号）</h3>
+      <div class="item-grid">${itemsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+   渲染：地区排行
+   ============================================================ */
+let rankItemId = 'heavy';
+function renderRank() {
+  const sel = document.getElementById('rankCatSelect');
+  if (!sel.options.length) {
+    CATEGORIES.forEach(cat => {
+      const og = document.createElement('optgroup'); og.label = cat.name;
+      cat.items.forEach(it => {
+        const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    sel.value = rankItemId;
+  }
+  const rows = PRICES.filter(p => p.itemId === rankItemId).sort((a,b) => b.price - a.price);
+  const high = rows[0], low = rows[rows.length-1];
+  document.getElementById('rankHigh').textContent = high.price.toLocaleString();
+  document.getElementById('rankHighSub').textContent = `${high.cityName} · ${high.prov}`;
+  document.getElementById('rankLow').textContent = low.price.toLocaleString();
+  document.getElementById('rankLowSub').textContent = `${low.cityName} · ${low.prov}`;
+  document.getElementById('rankSpread').textContent = (high.price - low.price).toLocaleString();
+
+  document.getElementById('rankBody').innerHTML = rows.map((r, i) => `
+    <tr>
+      <td><span class="tag ${i===0?'up':i===rows.length-1?'down':''}" style="font-weight:600">${i+1}</span></td>
+      <td>${r.prov} ${r.cityName}</td>
+      <td class="num" style="font-weight:600">${r.price.toLocaleString()}</td>
+      <td class="num" style="color:${r.dayPct>=0?'var(--up)':'var(--down)'}">${r.dayPct>=0?'+':''}${r.dayPct}%</td>
+      <td class="num" style="color:${r.weekPct>=0?'var(--up)':'var(--down)'}">${r.weekPct>=0?'+':''}${r.weekPct}%</td>
+    </tr>`).join('');
+}
+
+/* ============================================================
+   渲染：走势分析
+   ============================================================ */
+let trendChart = null;
+function renderTrend() {
+  const citySel = document.getElementById('trendCity');
+  const itemSel = document.getElementById('trendItem');
+  if (!citySel.options.length) {
+    CITIES.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name; citySel.appendChild(o); });
+    CATEGORIES.forEach(cat => {
+      const og = document.createElement('optgroup'); og.label = cat.name;
+      cat.items.forEach(it => { const o = document.createElement('option'); o.value = it.id; o.textContent = it.name; og.appendChild(o); });
+      itemSel.appendChild(og);
+    });
+  }
+  const cityId = citySel.value, itemId = itemSel.value;
+  const { dates, values } = buildHistory(cityId, itemId);
+  const entry = PRICES.find(p => p.cityId === cityId && p.itemId === itemId);
+  const max = Math.max(...values), min = Math.min(...values), avg = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
+  document.getElementById('trendSummary').innerHTML =
+    `区间最高 <b class="num">${max.toLocaleString()}</b> · 最低 <b class="num">${min.toLocaleString()}</b> · 均价 <b class="num">${avg.toLocaleString()}</b> 元/吨`;
+
+  if (!trendChart) trendChart = echarts.init(document.getElementById('trendChart'));
+  trendChart.setOption({
+    grid: { left: 60, right: 20, top: 30, bottom: 40 },
+    tooltip: { trigger: 'axis', confine: true, valueFormatter: v => v.toLocaleString() + ' 元/吨' },
+    xAxis: { type: 'category', data: dates, axisLine: {lineStyle:{color:'#dfe4ec'}}, axisLabel: {color:'#8a94a3', fontSize:11, interval: 14} },
+    yAxis: { type: 'value', scale: true, axisLabel: {color:'#8a94a3', fontSize:11}, splitLine: {lineStyle:{color:'#eef1f5'}} },
+    series: [{
+      name: entry ? entry.itemName : '价格', type: 'line', data: values, smooth: true,
+      symbol: 'none', lineStyle: { color: '#e8632b', width: 2 },
+      areaStyle: { color: {type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[
+        {offset:0, color:'rgba(232,99,43,.25)'}, {offset:1, color:'rgba(232,99,43,0)'}
+      ]}}
+    }]
+  });
+}
+
+/* ============================================================
+   渲染：商家入驻
+   ============================================================ */
+function renderMerchant() {
+  const citySel = document.getElementById('mchCity');
+  CITIES.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = `${c.prov} ${c.name}`; citySel.appendChild(o); });
+  const catSel = document.getElementById('mchCat');
+  CATEGORIES.forEach(cat => cat.items.forEach(it => {
+    const o = document.createElement('option'); o.value = it.id; o.textContent = `${cat.name} - ${it.name}`; catSel.appendChild(o);
+  }));
+  document.getElementById('merchantForm').addEventListener('submit', e => {
+    e.preventDefault();
+    showToast('申请已提交（原型演示，未真实发送）');
+    e.target.reset();
+  });
+}
+
+/* ============================================================
+   工具
+   ============================================================ */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+/* ============================================================
+   事件绑定（用事件委托）
+   ============================================================ */
+document.addEventListener('click', e => {
+  const goto = e.target.closest('[data-goto]');
+  if (goto) { navigate(goto.dataset.goto); return; }
+  const nav = e.target.closest('.nav-item');
+  if (nav) { navigate(nav.dataset.route); return; }
+  const chipCity = e.target.closest('[data-city]');
+  if (chipCity) { marketState.city = chipCity.dataset.city; renderMarket(); return; }
+  const chipCat = e.target.closest('[data-cat]');
+  if (chipCat) { marketState.cat = chipCat.dataset.cat; renderMarket(); return; }
+});
+document.getElementById('rankCatSelect').addEventListener('change', e => { rankItemId = e.target.value; renderRank(); });
+document.getElementById('trendCity').addEventListener('change', renderTrend);
+document.getElementById('trendItem').addEventListener('change', renderTrend);
+
+/* ============================================================
+   加载实时抓取数据 prices.json（由 scraper.py 生成）
+   ============================================================ */
+async function loadLiveData() {
+  try {
+    const res = await fetch('prices.json?_=' + Date.now());
+    if (!res.ok) throw new Error('no json');
+    const j = await res.json();
+    const rows = j.data || [];
+    document.getElementById('livePanel').style.display = 'block';
+    document.getElementById('liveSource').textContent =
+      `来源：${rows[0]?.source || ''} · 更新于 ${j.update_time}`;
+    document.getElementById('liveCount').textContent = `共 ${rows.length} 条`;
+    document.getElementById('liveBody').innerHTML = rows.slice(0, 30).map(r => `
+      <tr>
+        <td>${r.region}</td>
+        <td>${r.item}</td>
+        <td><span class="tag">${r.category}</span></td>
+        <td class="num" style="font-weight:600">${r.price.toLocaleString()}</td>
+        <td style="color:var(--text-3)">${r.date}</td>
+        <td style="color:var(--text-3);font-size:12px">${r.note||''}</td>
+      </tr>`).join('');
+  } catch (e) {
+    // 没有 prices.json 时静默隐藏（本地打开文件时可能 fetch 失败）
+    console.log('prices.json not found, run python3 scraper.py first');
+  }
+}
+
+/* ============================================================
+   启动
+   ============================================================ */
+(function init() {
+  const now = new Date();
+  document.getElementById('updateTime').textContent =
+    `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} 09:30`;
+  renderHome();
+  renderMarket();
+  renderCategory();
+  renderRank();
+  renderMerchant();
+  loadLiveData();
+  // 每 5 分钟自动刷新一次实时行情数据
+  setInterval(loadLiveData, 5 * 60 * 1000);
+  navigate((location.hash || '#/home').replace('#/',''));
+  window.addEventListener('resize', () => trendChart && trendChart.resize());
+})();
+</script>
+</body>
+</html>
